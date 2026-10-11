@@ -324,7 +324,7 @@ def score_drain(
     z_hist = [z_score(o, e, s) for o, e, s in zip(obs, d.expected_cm, d.spread_cm, strict=True)]
     level = obs[-1] if obs and not math.isnan(obs[-1]) else None
     expected = float(d.expected_cm[-1]) if len(d.expected_cm) else None
-    fill_pct = None if level is None or not d.has_sensor else round(100.0 * level / d.max_depth_cm, 1)
+    fill_pct = None if level is None or not d.has_sensor else round(min(100.0, 100.0 * level / d.max_depth_cm), 1)
 
     if sensor_usable:
         z_now = z_hist[-1]

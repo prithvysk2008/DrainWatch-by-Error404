@@ -9,13 +9,15 @@ from __future__ import annotations
 
 import json
 import math
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import numpy as np
 from sqlmodel import col, select
 
-from drainwatch import analytics, config, db, scoring
+from drainwatch import analytics, auth, config, db, scoring
 from drainwatch.allocation import CrewSlot, Job, Route, plan_routes, travel_minutes
 from drainwatch.config import FillThresholds
 from drainwatch.models import (
@@ -50,7 +52,15 @@ from drainwatch.models import (
 )
 from drainwatch.network import neighbour_map
 from drainwatch.simulate import (
+    AVENUE_DX,
+    AVENUE_X0,
+    AVENUES,
+    ROW_DY,
+    ROW_STREETS,
+    ROW_Y0,
     SCENARIOS,
+    ZONE_SPLIT_X,
+    ZONE_SPLIT_Y,
     ZONES,
     City,
     Faults,
@@ -136,7 +146,6 @@ class World:
     score_by_id: dict[str, DrainScore] = field(default_factory=dict)
     sim_reports: list[SimReport] = field(default_factory=list)
     notifications: list[Notification] = field(default_factory=list)
-    version: int = 0
     accumulator: float = 0.0
     next_report: int = 1001
     next_order: int = 101
@@ -144,6 +153,7 @@ class World:
 
 
 _world: World | None = None
+_version = 0  # module-level so it keeps rising across scenario resets
 
 
 def world() -> World:
@@ -406,7 +416,7 @@ def state() -> SimState:
 
 
 def version() -> int:
-    return world().version
+    return _version
 
 
 def now() -> datetime:
@@ -469,7 +479,8 @@ def _resimulate() -> None:
 
 
 def _bump() -> None:
-    world().version += 1
+    global _version
+    _version += 1
 
 
 # ---------------------------------------------------------------- revealing data step by step
@@ -767,6 +778,12 @@ def crews() -> list[Crew]:
         return list(s.exec(select(Crew).order_by(Crew.id)).all())
 
 
+def crews_available() -> list[Crew]:
+    """Crews not currently travelling to or working at a job."""
+    busy = {o.crew_id for o in _open_orders().values() if o.stage in (Stage.en_route, Stage.active)}
+    return [c for c in crews() if c.id not in busy]
+
+
 def crews_free() -> tuple[int, int]:
     all_crews = crews()
     busy = {o.crew_id for o in _open_orders().values() if o.stage in (Stage.en_route, Stage.active)}
@@ -826,6 +843,7 @@ class DrainDetail:
     times: list[str]
     observed: list[float | None]
     expected: list[float]
+    spread: list[float]
     rain_mm_10min: list[float]
     velocity_ms: float
     reports: list[Report]
@@ -877,6 +895,7 @@ def drain_detail(drain_id: str) -> DrainDetail | None:
         times=[f"{step_time(w.start, k):%H:%M}" for k in range(t + 1)],
         observed=[None if math.isnan(v) else round(float(v), 1) for v in obs],
         expected=[round(float(v), 1) for v in w.run.expected_cm[: t + 1, i]],
+        spread=[round(float(v), 1) for v in w.run.spread_cm[: t + 1, i]],
         rain_mm_10min=[round(float(v), 2) for v in w.run.rain_zt[: t + 1, zone_col]],
         velocity_ms=float(w.run.velocity_ms[t, i]),
         reports=list(reports),
@@ -1474,3 +1493,88 @@ def dispatch_batch_csv(limit: int = 20) -> str:
             f'{sc.score:.0f},{sc.band.value},"{sc.label.value}",{sc.confidence:.2f},"{reason}"'
         )
     return "\n".join(lines) + "\n"
+
+
+# ---------------------------------------------------------------- map geometry
+
+
+@dataclass
+class MapGeometry:
+    width: float
+    height: float
+    blocks: list[tuple[float, float, float, float]]  # x1, y1, x2, y2
+    river: list[tuple[float, float]]  # northern bank, west to east
+    zone_lines: list[tuple[tuple[float, float], tuple[float, float]]]
+    zone_labels: list[tuple[str, float, float]]
+    street_labels: list[tuple[str, float, float, bool]]  # text, x, y, vertical
+
+
+def map_geometry() -> MapGeometry:
+    """City blocks between the streets, the river bank and zone boundaries, in schematic metres."""
+    from drainwatch.simulate import river_y
+
+    half_street = 22.0
+    xs = [AVENUE_X0 + AVENUE_DX * i for i in range(len(AVENUES))]
+    ys = [ROW_Y0 + ROW_DY * j for j in range(len(ROW_STREETS))]
+    x_edges = [0.0, *xs, config.CITY_WIDTH_M]
+    y_edges = [600.0, *ys, config.CITY_HEIGHT_M]
+    blocks = []
+    for a, b in zip(x_edges, x_edges[1:], strict=False):
+        for c, d in zip(y_edges, y_edges[1:], strict=False):
+            x1, x2 = a + (half_street if a > 0 else 0), b - (half_street if b < config.CITY_WIDTH_M else 0)
+            y1, y2 = c + half_street, d - (half_street if d < config.CITY_HEIGHT_M else 0)
+            if x2 - x1 > 40 and y2 - y1 > 40:
+                blocks.append((round(x1, 1), round(y1, 1), round(x2, 1), round(y2, 1)))
+    river = [(float(x), round(river_y(float(x)), 1)) for x in range(0, int(config.CITY_WIDTH_M) + 1, 40)]
+    w, h = config.CITY_WIDTH_M, config.CITY_HEIGHT_M
+    zone_lines = [((ZONE_SPLIT_X, 640.0), (ZONE_SPLIT_X, h)), ((0.0, ZONE_SPLIT_Y), (w, ZONE_SPLIT_Y))]
+    zone_labels = [
+        (ZONES[0][1], 90.0, h - 70),
+        (ZONES[1][1], ZONE_SPLIT_X + 300.0, h - 70),
+        (ZONES[2][1], 90.0, ZONE_SPLIT_Y - 70),
+        (ZONES[3][1], ZONE_SPLIT_X + 300.0, ZONE_SPLIT_Y - 70),
+    ]
+    street_labels = [(name, w - 40.0, y, False) for name, y in zip(ROW_STREETS, ys, strict=True)]
+    return MapGeometry(w, h, blocks, river, zone_lines, zone_labels, street_labels)
+
+
+def open_reports() -> list[Report]:
+    with db.session_scope() as s:
+        return list(
+            s.exec(
+                select(Report).where(
+                    Report.is_history == False,  # noqa: E712
+                    Report.status != ReportStatus.resolved,
+                )
+            ).all()
+        )
+
+
+# ---------------------------------------------------------------- sign in
+
+
+def sign_in(username: str, password: str) -> dict | None:
+    """Demo accounts only. See auth.py."""
+    world()
+    return auth.sign_in(username, password)
+
+
+# ---------------------------------------------------------------- photos
+
+UPLOAD_DIR = Path(__file__).resolve().parent.parent / "static" / "uploads"
+PHOTO_TYPES = {".jpg", ".jpeg", ".png", ".webp"}
+MAX_PHOTO_BYTES = 8 * 1024 * 1024
+
+
+def save_photo(prefix: str, filename: str, data: bytes) -> str:
+    """Store an uploaded photo on this server and return its URL path."""
+    ext = Path(filename).suffix.lower()
+    if ext not in PHOTO_TYPES:
+        raise ValueError("Use a JPG, PNG or WebP photo.")
+    if len(data) > MAX_PHOTO_BYTES:
+        raise ValueError("Photos must be 8 MB or smaller.")
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    safe_prefix = "".join(ch for ch in prefix if ch.isalnum() or ch in "-_")[:40]
+    name = f"{safe_prefix}-{uuid.uuid4().hex[:10]}{ext}"
+    (UPLOAD_DIR / name).write_bytes(data)
+    return f"/static/uploads/{name}"

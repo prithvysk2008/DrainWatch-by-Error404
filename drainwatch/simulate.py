@@ -405,8 +405,8 @@ def simulate_run(
     s_true, out_true = _route(city, rain_zt, factor, order, downstream, np.zeros(city.n))
 
     base = city.base_fill * depth
-    expected_cm = np.minimum(base + s_expected / city.smax_m3 * depth, 1.05 * depth)
-    true_cm = np.minimum(base + s_true / city.smax_m3 * depth, 1.05 * depth)
+    expected_cm = np.minimum(base + s_expected / city.smax_m3 * depth, depth)  # above the brim, water spills
+    true_cm = np.minimum(base + s_true / city.smax_m3 * depth, depth)
 
     noise = np.random.default_rng(seed + 2).normal(0, SIM.noise_cm, (steps, city.n))
     observed = np.clip(true_cm + noise, 0, None)

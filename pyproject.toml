@@ -27,6 +27,7 @@ extend-exclude = [".data"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["SIM117"]  # nested `with` blocks mirror the UI tree in NiceGUI code
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
