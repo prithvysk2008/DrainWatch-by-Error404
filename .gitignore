@@ -224,3 +224,4 @@ __marimo__/
 static/uploads/*
 !static/uploads/.gitkeep
 .nicegui/
+.DS_Store
