@@ -188,7 +188,7 @@ async def shell(active: str, title: str) -> Page | None:
             st = service.state()
             if st.playing:
                 c.button("Pause storm", icon="pause", on_click=lambda: service.pause(page.username)).classes(
-                    "dw-btn-primary"
+                    "dw-btn-primary dw-play"
                 ).props("unelevated no-caps")
             else:
                 done = st.step >= st.total_steps - 1
@@ -196,7 +196,7 @@ async def shell(active: str, title: str) -> Page | None:
                     "Storm finished" if done else ("Resume storm" if st.step else "Start storm"),
                     icon="play_arrow",
                     on_click=lambda: service.play(page.username),
-                ).classes("dw-btn-primary").props("unelevated no-caps" + (" disable" if done else ""))
+                ).classes("dw-btn-primary dw-play").props("unelevated no-caps" + (" disable" if done else ""))
 
         with ui.row().classes("items-center gap-2 no-wrap"):
             c.button(icon="tune", on_click=lambda: toggle_stormbar()).classes("dw-icon-btn max-md:hidden").props(

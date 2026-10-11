@@ -813,6 +813,12 @@ body.body--dark .dw-badge.is-solid.tone-normal {
   border-bottom: 1px solid var(--border);
   height: 52px;
 }
+.dw-table.q-table__card td,
+.dw-table.q-table__card th,
+.dw-table .q-table td,
+.dw-table .q-table th {
+  padding: 8px 10px;
+}
 .dw-table tbody tr {
   cursor: pointer;
 }
@@ -1245,6 +1251,19 @@ body.body--dark .dw-badge.is-solid.tone-normal {
 }
 
 @media (max-width: 640px) {
+  .dw-topbar .dw-brand-name {
+    display: none;
+  }
+  /* Quasar's .block is !important in a layer, so collapse the label instead of hiding it.
+     The text stays available to screen readers. */
+  .dw-play .q-btn__content > .block {
+    width: 0;
+    font-size: 0;
+    overflow: hidden;
+  }
+  .dw-play .q-icon.on-left {
+    margin-right: 0;
+  }
   .dw-page {
     padding: 14px 14px 28px;
   }
