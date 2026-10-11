@@ -35,6 +35,8 @@ on every start.
   module-level `_version` counter on every change. `GroundTruth` is read only by `service.validation()`.
 - `ui/layout.py` builds the operator shell. Each page polls `service.version()` with a timer and calls callbacks
   registered through `Page.on_live` and `Page.on_theme`. Crew pages use `crew_shell` in `ui/pages/crew.py`.
+- `ui/pages/wall.py` is the full-screen control room view (always dark, own shell, polls the same version counter).
+  The shell's search dialog (Ctrl+K or /) opens the drawer, or `/queue?drain=ID` on pages without one.
 - `ui/map_view.py` draws the schematic network with ECharts (cartesian axes, markArea blocks, `lines` pipes with an
   effect for flow, `effectScatter` pulses). Live refreshes send only `series` via `run_chart_method('setOption')` so
   the viewer's zoom survives; `restyle()` does a full redraw for theme changes. The CSS container keeps a 4:3 aspect.
@@ -46,6 +48,8 @@ on every start.
 - Quasar's colour and display utilities (`bg-primary`, `.block`, ...) are `!important` inside a CSS layer and beat
   unlayered `!important`. Use `c.button(...)` from `ui/components.py` (passes `color=None`) instead of `ui.button`,
   use `toggle-color=dw-on toggle-text-color=dw-on-text` on toggles, and never try to override Quasar utilities.
+- The reverse also bites: an unlayered rule such as `.dw-chip { display: inline-flex }` beats Tailwind's layered
+  `hidden` or `max-lg:hidden`. Put responsive display rules for `dw-*` elements in the stylesheet.
 - `ui.colors(...)` in `layout.head()` points Quasar colours at `var(--accent)` etc., so they follow the theme.
 - NiceGUI puts drawer classes on `.q-drawer__content`; style the drawer with `.q-drawer:has(> .dw-...)`.
 - Inside a page function, define handlers before rendering any `@ui.refreshable` that references them (or call them

@@ -14,6 +14,8 @@ Built by Team Error404 for PySustain-2026, Track 2: water management and sanitat
 |---|---|
 | ![Live monitoring map in dark mode](docs/screenshots/map-dark.png) | ![Drain detail drawer](docs/screenshots/drain-detail-dark.png) |
 
+![Control room wall](docs/screenshots/wall.png)
+
 ## Run it
 
 You need [uv](https://docs.astral.sh/uv/). It installs the right Python version and every dependency.
@@ -37,6 +39,13 @@ Demonstration only: shared accounts with a published password and no real securi
 | `crew` | `demo` | Field crew: my tasks, task checklist and photos, report a blockage. Built for a phone. |
 
 The sign-in screen lists both accounts, so one click signs you in.
+
+### Useful extras
+
+- **Search**: the magnifier in the top bar, or press Ctrl+K (Cmd+K on a Mac) or /, finds drains by id, street or ward
+  and reports by id or text.
+- **Control room wall**: open `/wall` (sidebar, Displays) on a large screen. It is always dark, full screen and
+  refreshes itself as the storm runs.
 
 ### Tests and lint
 

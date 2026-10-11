@@ -147,7 +147,7 @@ async def shell(active: str, title: str) -> Page | None:
             @ui.refreshable
             def storm_chip() -> None:
                 st = service.state()
-                with ui.element("span").classes("dw-chip"):
+                with ui.element("span").classes("dw-chip dw-chip-storm"):
                     ui.element("span").classes("dw-live-dot " + ("is-live" if st.playing else "is-idle"))
                     ui.label(f"{st.scenario}, step {st.step + 1} of {st.total_steps}")
 
@@ -204,8 +204,8 @@ async def shell(active: str, title: str) -> Page | None:
             ).tooltip("Storm control: scenario, intensity, speed and reset")
             play_button()
             c.button("Log incident", icon="add", on_click=lambda: log_incident_dialog(page)).classes(
-                "dw-btn-secondary max-sm:hidden"
-            ).props("unelevated no-caps")
+                "dw-btn-secondary dw-collapse max-sm:hidden"
+            ).props("unelevated no-caps").tooltip("Log incident")
 
             @ui.refreshable
             def bell() -> None:
@@ -258,6 +258,9 @@ async def shell(active: str, title: str) -> Page | None:
                 bell.refresh()
 
             bell()
+            c.button(icon="search", on_click=lambda: search_dialog(page)).classes("dw-icon-btn").props(
+                'flat aria-label="Search drains and reports (Ctrl+K)"'
+            ).tooltip("Search drains and reports. Shortcut: Ctrl+K or /")
 
             @ui.refreshable
             def theme_button() -> None:
@@ -286,7 +289,7 @@ async def shell(active: str, title: str) -> Page | None:
         ui.left_drawer(value=None, fixed=True).classes("dw-sidebar p-0").props("width=256 breakpoint=1024") as sidebar,
         ui.column().classes("h-full w-full gap-0 no-wrap"),
     ):
-        with ui.column().classes("w-full gap-0 grow overflow-y-auto pt-2"):
+        with ui.column().classes("w-full gap-0 grow overflow-y-auto overflow-x-hidden pt-2"):
             ui.label("Operations").classes("dw-nav-group")
 
             @ui.refreshable
@@ -311,6 +314,10 @@ async def shell(active: str, title: str) -> Page | None:
                             ).tooltip("New reports")
 
             nav()
+            ui.label("Displays").classes("dw-nav-group")
+            with ui.link(target="/wall").classes("dw-nav-item"):
+                ui.icon("tv")
+                ui.label("Control room wall")
             ui.label("Reference").classes("dw-nav-group")
             with ui.link(target="/about").classes("dw-nav-item" + (" is-active" if active == "about" else "")):
                 ui.icon("menu_book")
@@ -395,6 +402,13 @@ async def shell(active: str, title: str) -> Page | None:
         banner.refresh()
         page.fire_live()
 
+    def shortcut(e) -> None:
+        if not e.action.keydown or e.action.repeat:
+            return
+        if (e.key == "k" and (e.modifiers.ctrl or e.modifiers.meta)) or (e.key == "/" and not e.modifiers.shift):
+            search_dialog(page)
+
+    ui.keyboard(on_key=shortcut)
     page.version = service.version()
     ui.timer(0.5, poll)
     return page
@@ -569,6 +583,73 @@ def log_incident_dialog(page: Page, drain_id: str | None = None) -> None:
             c.button("Log incident", icon="check", on_click=submit).classes("dw-btn-primary").props(
                 "unelevated no-caps"
             )
+    dialog.open()
+
+
+def search_dialog(page: Page) -> None:
+    """Find a drain by id, street or ward, or a report by id or text. Choosing a result opens the drain."""
+    with ui.dialog().props("position=top") as dialog, ui.card().classes("p-0 w-[620px] max-w-[95vw] mt-16"):
+        query = (
+            ui.input(placeholder="Search drains and reports, for example D-018, Canal Street or R-1004")
+            .props('outlined autofocus clearable aria-label="Search"')
+            .classes("w-full px-4 pt-4")
+        )
+        with query.add_slot("prepend"):
+            ui.icon("search")
+        results = ui.column().classes("w-full gap-0 px-2 pb-3 max-h-[60vh] overflow-y-auto")
+
+        def choose(drain_id: str) -> None:
+            dialog.close()
+            if page.open_drain:
+                page.open_drain(drain_id)
+            else:
+                ui.navigate.to(f"/queue?drain={drain_id}")
+
+        def render() -> None:
+            results.clear()
+            q = (query.value or "").strip()
+            with results:
+                if not q:
+                    ui.label("Type at least two characters.").classes("dw-small dw-muted px-3 py-3")
+                    return
+                if len(q) < 2:
+                    return
+                drains = service.search(q, 8)
+                reports = service.search_reports(q, 5)
+                if not drains and not reports:
+                    ui.label(f"Nothing matches {q}. Try a drain id like D-018 or a street name.").classes(
+                        "dw-small dw-muted px-3 py-3"
+                    )
+                    return
+                if drains:
+                    ui.label("Drains").classes("dw-xs dw-muted px-3 pt-3 pb-1")
+                    for d in drains:
+                        sc = service.score_for(d.id)
+                        with ui.item(on_click=lambda i=d.id: choose(i)).classes("rounded"):
+                            with ui.item_section():
+                                ui.label(f"{d.id} {d.name}").classes("font-semibold text-[13.5px]")
+                                ui.label(f"{d.zone_name}, {d.ward}").classes("dw-xs dw-muted")
+                            if sc:
+                                with ui.item_section().props("side"):
+                                    c.band_badge(sc.band.value, sc.score)
+                if reports:
+                    ui.label("Reports this storm").classes("dw-xs dw-muted px-3 pt-3 pb-1")
+                    for r in reports:
+                        with ui.item(on_click=lambda i=r.drain_id: choose(i)).classes("rounded"):
+                            with ui.item_section():
+                                ui.label(f"{r.id}, drain {r.drain_id}").classes("font-semibold text-[13.5px]")
+                                ui.label(f"{r.type.value}. {r.reporter}").classes("dw-xs dw-muted")
+                            with ui.item_section().props("side"):
+                                c.severity_badge(r.severity.value)
+
+        query.on("update:model-value", render, throttle=0.2)
+        query.on(
+            "keydown.enter",
+            lambda: (
+                choose(service.search(query.value or "", 1)[0].id) if service.search(query.value or "", 1) else None
+            ),
+        )
+        render()
     dialog.open()
 
 

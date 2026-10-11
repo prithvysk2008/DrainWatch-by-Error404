@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parent
 app.add_static_files("/static", str(ROOT / "static"))
 
 # Importing the page modules registers their routes.
-from ui.pages import about, analytics, crew, incidents, login, map, overview, queue, sensors, work_orders  # noqa: E402,F401
+from ui.pages import about, analytics, crew, incidents, login, map, overview, queue, sensors, wall, work_orders  # noqa: E402,F401
 
 TICK_SECONDS = 0.25
 

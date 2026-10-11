@@ -1183,6 +1183,134 @@ body.body--dark .dw-badge.is-solid.tone-normal {
   padding: 4px 8px;
 }
 
+/* ------------------------------------------------------------------ control room wall (always dark) */
+.dw-wall {
+  height: 100vh;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px 18px 18px;
+  background: #060a14;
+  color: var(--text);
+  position: relative;
+}
+.dw-wall::before,
+.dw-wall::after {
+  content: "";
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  pointer-events: none;
+}
+.dw-wall::before {
+  top: 6px;
+  left: 6px;
+  border-top: 2px solid var(--accent);
+  border-left: 2px solid var(--accent);
+}
+.dw-wall::after {
+  bottom: 6px;
+  right: 6px;
+  border-bottom: 2px solid var(--accent);
+  border-right: 2px solid var(--accent);
+}
+.dw-wall-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 10px 10px;
+  border-bottom: 1px solid #1c2c4a;
+}
+.dw-wall-name {
+  font-family: "Saira Semi Condensed", "Inter", sans-serif;
+  font-weight: 700;
+  font-size: 30px;
+  line-height: 1.1;
+  color: #5eead4;
+}
+.dw-wall-clock {
+  font-family: "Saira Semi Condensed", "Inter", sans-serif;
+  font-weight: 600;
+  font-size: 24px;
+  color: #a7f3d0;
+}
+.dw-wall-dim {
+  color: var(--muted);
+}
+.dw-wall-sub {
+  font-size: 13px;
+  color: var(--muted);
+}
+.dw-wall-text {
+  font-size: 15px;
+}
+.dw-wall-strong {
+  font-size: 16px;
+  font-weight: 600;
+}
+.dw-wall-big {
+  font-family: "Saira Semi Condensed", "Inter", sans-serif;
+  font-weight: 700;
+  font-size: 40px;
+  line-height: 1.05;
+}
+.dw-wall-big.is-critical {
+  color: var(--critical);
+}
+.dw-wall-big.is-high {
+  color: var(--high);
+}
+.dw-wall-ticker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border: 1px solid #1c2c4a;
+  border-radius: 8px;
+  background: rgba(11, 21, 51, 0.7);
+  font-size: 15px;
+}
+.dw-wall-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 22%) minmax(0, 1fr) minmax(320px, 24%);
+  gap: 12px;
+  min-height: 0;
+}
+.dw-wall-panel {
+  background: rgba(11, 21, 51, 0.72);
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  border-radius: 8px;
+  padding: 12px 14px;
+  box-shadow: inset 0 0 24px rgba(34, 211, 238, 0.04);
+}
+.dw-wall-title {
+  font-family: "Saira Semi Condensed", "Inter", sans-serif;
+  font-weight: 600;
+  font-size: 17px;
+  color: #a5f3fc;
+  padding-left: 10px;
+  border-left: 3px solid var(--accent);
+  line-height: 1.2;
+}
+.dw-wall-alert {
+  border: 1px solid #1c2c4a;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: rgba(6, 10, 20, 0.6);
+}
+@media (max-width: 1100px) {
+  .dw-wall {
+    height: auto;
+  }
+  .dw-wall-grid {
+    grid-template-columns: 1fr;
+  }
+  .dw-wall .dw-hud {
+    min-height: 520px;
+  }
+}
+
 /* ------------------------------------------------------------------ login */
 .dw-login-bg {
   min-height: 100vh;
@@ -1250,6 +1378,22 @@ body.body--dark .dw-badge.is-solid.tone-normal {
   background: transparent;
 }
 
+@media (max-width: 1439px) {
+  .dw-chip-storm {
+    display: none;
+  }
+}
+@media (max-width: 1535px) {
+  /* Icon-only below 2xl so the command bar fits; the label stays readable by screen readers. */
+  .dw-collapse .q-btn__content > .block {
+    width: 0;
+    font-size: 0;
+    overflow: hidden;
+  }
+  .dw-collapse .q-icon.on-left {
+    margin-right: 0;
+  }
+}
 @media (max-width: 640px) {
   .dw-topbar .dw-brand-name {
     display: none;

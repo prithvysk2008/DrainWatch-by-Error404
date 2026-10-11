@@ -699,6 +699,27 @@ def search(query: str, limit: int = 8) -> list[DrainInfo]:
     return hits[:limit]
 
 
+def search_reports(query: str, limit: int = 5) -> list[Report]:
+    """Reports from this storm whose id, drain, type or text match."""
+    q = query.strip().lower()
+    if not q:
+        return []
+    with db.session_scope() as s:
+        rows = s.exec(
+            select(Report).where(Report.is_history == False).order_by(col(Report.ts).desc())  # noqa: E712
+        ).all()
+    hits = [
+        r
+        for r in rows
+        if q in r.id.lower()
+        or q in r.drain_id.lower()
+        or q in r.type.value.lower()
+        or q in r.description.lower()
+        or q in r.reporter.lower()
+    ]
+    return hits[:limit]
+
+
 def city_rain_mm_h() -> float:
     w = world()
     return float(w.run.city_rain[w.step]) * 6.0

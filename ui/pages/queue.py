@@ -106,7 +106,7 @@ def table_rows(zone_id: str | None, view: str, label: str) -> list[dict]:
 
 
 @ui.page("/queue")
-async def queue_page() -> None:
+async def queue_page(drain: str | None = None) -> None:
     page = await shell("queue", "Priority risk queue")
     if page is None:
         return
@@ -266,3 +266,5 @@ async def queue_page() -> None:
             body.refresh()
 
     page.on_live(live)
+    if drain and service.drain_info(drain):
+        drawer.open(drain)
