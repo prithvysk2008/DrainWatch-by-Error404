@@ -1,0 +1,33 @@
+[project]
+name = "drainwatch"
+version = "0.1.0"
+description = "Drain Watch: inspection priority for municipal drainage teams during heavy rain (simulated data)."
+authors = [{ name = "Team Error404" }]
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "networkx>=3.7",
+    "nicegui>=3.18.0",
+    "numpy>=2.5.4",
+    "sqlmodel>=0.0.48",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.17.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = [".data"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
